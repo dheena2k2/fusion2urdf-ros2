@@ -230,7 +230,7 @@ def write_gazebo_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name,
         f.write('  <material>${body_color}</material>\n')
         f.write('  <mu1>0.2</mu1>\n')
         f.write('  <mu2>0.2</mu2>\n')
-        f.write('  <selfCollide>true</selfCollide>\n')
+        f.write('  <self_collide>true</self_collide>\n')
         f.write('  <gravity>true</gravity>\n')
         f.write('</gazebo>\n')
         f.write('\n')
@@ -242,7 +242,7 @@ def write_gazebo_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name,
             f.write('  <material>${body_color}</material>\n')
             f.write('  <mu1>0.2</mu1>\n')
             f.write('  <mu2>0.2</mu2>\n')
-            f.write('  <selfCollide>true</selfCollide>\n')
+            f.write('  <self_collide>true</self_collide>\n')
             f.write('</gazebo>\n')
             f.write('\n')
 
