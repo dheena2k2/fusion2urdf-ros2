@@ -153,7 +153,6 @@ def create_package(package_name, save_dir, package_dir):
 
     try: os.mkdir(save_dir + '/config')
     except: pass
-    copy_tree(package_dir + '/config', save_dir + '/config')
 
     try: os.mkdir(save_dir + '/' +package_name)
     except: pass
@@ -167,7 +166,8 @@ def create_package(package_name, save_dir, package_dir):
 
     try: os.mkdir(save_dir + '/test')
     except: pass
-    copy_tree(package_dir + '/test', save_dir + '/test')
+
+    copy_tree(package_dir, save_dir)
 
 def update_setup_py(save_dir, package_name):
     file_name = save_dir + '/setup.py'
