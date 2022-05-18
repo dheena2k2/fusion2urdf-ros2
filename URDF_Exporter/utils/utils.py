@@ -156,12 +156,12 @@ def create_package(package_name, save_dir, package_dir):
 
     try: os.mkdir(save_dir + '/' +package_name)
     except: pass
-    with open(os.path.join(save_dir, package_name, '__init__.py'), w):
+    with open(os.path.join(save_dir, package_name, '__init__.py'), 'w'):
         pass
 
     try: os.mkdir(save_dir + '/resource')
     except: pass
-    with open(os.path.join(save_dir, 'resource', package_name), w):
+    with open(os.path.join(save_dir, 'resource', package_name), 'w'):
         pass
 
     try: os.mkdir(save_dir + '/test')
