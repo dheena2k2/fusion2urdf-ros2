@@ -1,30 +1,6 @@
-# fusion2urdf
+# fusion2urdf ROS2
 
-I have stopped developing this repo, but any contributions are welcome.
-This repo only supports Gazebo, if you are using pybullet, see: https://github.com/yanshil/Fusion2PyBullet.
-
-
-## Updated!!!
-* 2021/01/09: Fix xyz calculation. 
-  * If you see that your components move arround the map center in rviz try this update 
-  * More Infos see: https://forums.autodesk.com/t5/fusion-360-api-and-scripts/difference-of-geometryororiginone-and-geometryororiginonetwo/m-p/9837767
-
-* 2020/11/10: README fix
-  * MacOS Installation command fixed in README
-  * Date format unified in README to yyyy/dd/mm
-  * Shifted Installation Upwards for better User Experience and easier to find
-* 2020/01/04: Multiple updates:
-  * no longer a need to run a bash script to convert stls
-  * some cleanup around joint and transmission generation
-  * defines a sample material tag instead of defining a material in each link
-  * fusion2urdf now generates a self-contained ROS {robot_name}_description package
-  * now launched by roslaunch {robot_name}_description display.launch
-  * changed fusion2urdf output from urdf to xacro for more flexibility
-  * separate out material, transmissions, gazebo elements to separate files
-* 2018/20/10: Fixed functions to generate launch files
-* 2018/25/09: Supports joint types "Rigid", "Slider" & Supports the joints' limit(for "Revolute" and "Slider"). 
-* 2018/19/09: Fixed the bugs about the center of the mass and the inertia.
-
+This repository is initially forked from https://github.com/syuntoku14/fusion2urdf and edited to export description package suited for ROS2 ament_python type build.
 
 ## Installation
 
@@ -34,14 +10,14 @@ Run the following command in your shell.
 
 ```powershell
 cd <path to fusion2urdf>
-Copy-Item ".\URDF_Exporter\" -Destination "${env:APPDATA}\Autodesk\Autodesk Fusion 360\API\Scripts\" -Recurse
+Copy-Item ".\URDF_Exporter_Ros2\" -Destination "${env:APPDATA}\Autodesk\Autodesk Fusion 360\API\Scripts\" -Recurse
 ```
 
 ##### macOS (In bash or zsh)
 
 ```bash
 cd <path to fusion2urdf>
-cp -r ./URDF_Exporter "$HOME/Library/Application Support/Autodesk/Autodesk Fusion 360/API/Scripts/"
+cp -r ./URDF_Exporter_Ros2 "$HOME/Library/Application Support/Autodesk/Autodesk Fusion 360/API/Scripts/"
 ```
 
 ## What is this script?
@@ -49,7 +25,7 @@ This is a fusion 360 script to export urdf from fusion 360 directly.
 
 This exports:
 * .urdf file of your model
-* .launch and .yaml files to simulate your robot on gazebo
+* .launch files to simulate your robot on gazebo and rviz
 * .stl files of your model
 
 ### Sample 
@@ -60,7 +36,7 @@ Make sure z axis is upright in your fusion 360 model if you want.
 #### original model
 <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/industrial_robot.png" alt="industrial_robot" title="industrial_robot" width="300" height="300">
 
-#### Gazebo simulation of exported .urdf and .launch
+#### Gazebo simulation of exported .urdf and .launch.py
 * center of mass
 <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/center_of_mass.png" alt="center_of_mass" title="center_of_mass" width="300" height="300">
 
@@ -145,7 +121,7 @@ Run the [installation command](#installation) in your shell.
 
 ### Run in Fusion 360
 
-Click ADD-INS in fusion 360, then choose ****fusion2urdf****. 
+Click ADD-INS in fusion 360, then choose ****Scripts and Add-Ins > URDF_Exporter_Ros2****. 
 
 **This script will change your model. So before running it, copy your model to backup.**
 
@@ -173,41 +149,29 @@ The folder "Desktop/test" will be required in the next step. Move them into your
 
 #### In your ROS environment
 
-Place the generated _description package directory in your own ROS workspace. "catkin_ws" is used in this example.
+Place the generated _description package directory in your own ROS workspace. "model_ws" is used in this example.
 Then, run catkin_make in catkin_ws.
 
 ```bash
-cd ~/catkin_ws/
-catkin_make
-source devel/setup.bash
+cd ~/model_ws/
+colcon build
 ```
 
 Now you can see your robot in rviz. You can see it by the following command.
 
+Open a new terminal
+
 ```bash
-roslaunch (whatever your robot_name is)_description display.launch
+cd ~/model_ws/
+source install/setup.bash
+ros2 launch (whatever your robot_name is)_description display.launch.py
 ```
 
 <img src="https://github.com/syuntoku14/fusion2urdf/blob/images/rviz_robot.png" alt="rviz" title="rviz" width="300" height="300">
 
 If you want to simulate your robot on gazebo, just run
 ```bash
-roslaunch (whatever your robot_name is)_description gazebo.launch
+ros2 launch (whatever your robot_name is)_description gazebo.launch.py
 ```
 
-**Enjoy your Fusion 360 and ROS life!**
-
-
-
-# Citation
-
-```
-@misc{toshinori2020fusion2urdf,
-    author = {Toshinori Kitamura},
-    title = {Fusion2URDF},
-    year = {2020},
-    publisher = {GitHub},
-    journal = {GitHub repository},
-    howpublished = {\url{https://github.com/syuntoku14/fusion2urdf}}
-}
-```
+**Enjoy your Fusion 360 and ROS2 life!**
