@@ -157,7 +157,7 @@ cd ~/model_ws/
 colcon build
 ```
 
-Now you can see your robot in rviz. You can see it by the following command.
+Now you can see your robot in rviz by using the following command.
 
 Open a new terminal
 
