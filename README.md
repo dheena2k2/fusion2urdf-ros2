@@ -2,6 +2,8 @@
 
 This repository is initially forked from https://github.com/syuntoku14/fusion2urdf and edited to export description package suited for ROS2 ament_python type build.
 
+**Note:** Currently this is tested only with ros2-foxy
+
 ## Installation
 
 Run the following command in your shell.
