@@ -2,7 +2,7 @@
 
 This repository is initially forked from https://github.com/syuntoku14/fusion2urdf and edited to export description package suited for ROS2 ament_python type build.
 
-**Note:** Currently this is tested only with ros2-foxy
+This is an Add-In script for Fusion360 to export the 3D models to a robot description package which cocntains urdf, .stl, scripts, etc.. to make it executable in ROS2
 
 ## Installation
 
@@ -27,7 +27,7 @@ This is a fusion 360 script to export urdf from fusion 360 directly.
 
 This exports:
 * .urdf file of your model
-* .launch files to simulate your robot on gazebo and rviz
+* .launch.py files to simulate your robot on gazebo and rviz
 * .stl files of your model
 
 ### Sample 
