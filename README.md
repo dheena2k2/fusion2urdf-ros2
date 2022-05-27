@@ -1,8 +1,8 @@
 # fusion2urdf ROS2
 
-This repository is initially forked from https://github.com/syuntoku14/fusion2urdf and edited to export description package suited for ROS2 ament_python type build.
+This repository is initially forked from [syuntoku14/fusion2urdf](https://github.com/syuntoku14/fusion2urdf) and edited to export description package suited for ROS2 ament_python type build. Check out [syuntoku14/fusion2urdf](https://github.com/syuntoku14/fusion2urdf) for converting fusion360 model to robot description package of ROS1.
 
-This is an Add-In script for Fusion360 to export the 3D models to a robot description package which cocntains urdf, .stl, scripts, etc.. to make it executable in ROS2
+This is an Add-In script for Fusion360 to export the 3D models to a robot description package which cocntains urdf, .stl, scripts, etc.. to make it executable in ROS2.
 
 ## Installation
 
