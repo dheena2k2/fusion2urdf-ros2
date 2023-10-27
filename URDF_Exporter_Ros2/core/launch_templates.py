@@ -1,148 +1,97 @@
-display_launch = """from launch_ros.actions import Node
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
-from launch.conditions import IfCondition, UnlessCondition
-import xacro
+display_launch = """import launch
+from launch.substitutions import Command, LaunchConfiguration
+import launch_ros
+from launch.conditions import IfCondition
 import os
-from ament_index_python.packages import get_package_share_directory
-
+from launch_ros.descriptions import ParameterValue
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('%s')
-
-    xacro_file = os.path.join(share_dir, 'urdf', '%s.xacro')
-    robot_description_config = xacro.process_file(xacro_file)
-    robot_urdf = robot_description_config.toxml()
-
-    rviz_config_file = os.path.join(share_dir, 'config', 'display.rviz')
-
-    gui_arg = DeclareLaunchArgument(
-        name='gui',
-        default_value='True'
-    )
-
-    show_gui = LaunchConfiguration('gui')
-
-    robot_state_publisher_node = Node(
+    pkg_share = launch_ros.substitutions.FindPackageShare(package='{}').find('{}')
+    default_model_path = os.path.join(pkg_share, 'models/urdf/{}.xacro')
+    default_rviz_config_path = os.path.join(pkg_share, 'rviz/display.rviz')
+    gazebo_pkg_share = launch_ros.substitutions.FindPackageShare(package='gazebo_ros').find('gazebo_ros')
+    world_path = os.path.join(gazebo_pkg_share, 'worlds/room2.sdf')
+    sdf_path = os.path.join(pkg_share, 'models/urdf/{}/model.sdf')
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    robot_state_publisher_node = launch_ros.actions.Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        name='robot_state_publisher',
-        parameters=[
-            {'robot_description': robot_urdf}
-        ]
+        parameters=[{'use_sim_time': use_sim_time}, {'robot_description': ParameterValue(Command(['xacro ', LaunchConfiguration('model')]), value_type=str)}]
     )
-
-    joint_state_publisher_node = Node(
-        condition=UnlessCondition(show_gui),
+    joint_state_publisher_node = launch_ros.actions.Node(
         package='joint_state_publisher',
         executable='joint_state_publisher',
-        name='joint_state_publisher'
+        name='joint_state_publisher',
+        parameters=[{'use_sim_time': use_sim_time}],
     )
-
-    joint_state_publisher_gui_node = Node(
-        condition=IfCondition(show_gui),
-        package='joint_state_publisher_gui',
-        executable='joint_state_publisher_gui',
-        name='joint_state_publisher_gui'
-    )
-
-    rviz_node = Node(
+    rviz_node = launch_ros.actions.Node(
         package='rviz2',
         executable='rviz2',
         name='rviz2',
-        arguments=['-d', rviz_config_file],
-        output='screen'
+        output='screen',
+        arguments=['-d', LaunchConfiguration('rvizconfig')],
+        parameters=[{'use_sim_time': use_sim_time}],
     )
-
-    return LaunchDescription([
-        gui_arg,
-        robot_state_publisher_node,
-        joint_state_publisher_node,
-        joint_state_publisher_gui_node,
-        rviz_node
-    ])
-"""
-
-gazebo_launch = """from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
-from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import PathJoinSubstitution
-import os
-import xacro
-from ament_index_python.packages import get_package_share_directory
-
-
-def generate_launch_description():
-    share_dir = get_package_share_directory('%s')
-
-    xacro_file = os.path.join(share_dir, 'urdf', '%s.xacro')
-    robot_description_config = xacro.process_file(xacro_file)
-    robot_urdf = robot_description_config.toxml()
-
-    robot_state_publisher_node = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        name='robot_state_publisher',
-        parameters=[
-            {'robot_description': robot_urdf}
-        ]
-    )
-
-    joint_state_publisher_node = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher'
-    )
-
-    gazebo_server = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('gazebo_ros'),
-                'launch',
-                'gzserver.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'pause': 'true'
-        }.items()
-    )
-
-    gazebo_client = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('gazebo_ros'),
-                'launch',
-                'gzclient.launch.py'
-            ])
-        ])
-    )
-
-    urdf_spawn_node = Node(
+    spawn_entity = launch_ros.actions.Node(
+        condition=IfCondition(use_sim_time),
         package='gazebo_ros',
         executable='spawn_entity.py',
-        arguments=[
-            '-entity', '%s',
-            '-topic', 'robot_description'
-        ],
+        arguments=['-entity', '{}', '-topic', 'robot_description'],
+        parameters=[{'use_sim_time': use_sim_time}],
         output='screen'
     )
 
-    return LaunchDescription([
-        robot_state_publisher_node,
+    return launch.LaunchDescription([
+        launch.actions.DeclareLaunchArgument(name='use_sim_time', default_value='True',
+                                            description='Flag to enable use_sim_time'),
+        launch.actions.DeclareLaunchArgument(name='model', default_value=default_model_path,
+                                            description='Absolute path to robot urdf file'),
+        launch.actions.DeclareLaunchArgument(name='rvizconfig', default_value=default_rviz_config_path,
+                                            description='Absolute path to rviz config file'),
+        launch.actions.ExecuteProcess(condition=IfCondition(use_sim_time), cmd=['gazebo', '--verbose', '-s',
+                                            'libgazebo_ros_init.so', '-s', 'libgazebo_ros_factory.so', world_path],
+                                        output='screen'),
         joint_state_publisher_node,
-        gazebo_server,
-        gazebo_client,
-        urdf_spawn_node,
+        robot_state_publisher_node,
+        spawn_entity,
+        rviz_node,
     ])
 """
 
 
+state_publisher_launch = """import launch
+import os
+from launch.substitutions import Command, LaunchConfiguration
+import launch_ros
+from launch_ros.descriptions import ParameterValue
+
+def generate_launch_description():
+    pkg_share = launch_ros.substitutions.FindPackageShare(package='{}').find('{}')
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    default_model_path = os.path.join(pkg_share, 'models/urdf/{}.xacro')
+    robot_state_publisher_node = launch_ros.actions.Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        parameters=[{'use_sim_time': use_sim_time}, {'robot_description': ParameterValue(Command(['xacro ', LaunchConfiguration('model')]), value_type=str)}]
+    )
+    joint_state_publisher_node = launch_ros.actions.Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
+        parameters=[{'use_sim_time': use_sim_time}],
+    )
+    return launch.LaunchDescription([
+        launch.actions.DeclareLaunchArgument(name='use_sim_time', default_value='True',
+                                    description='Flag to enable use_sim_time'),
+        launch.actions.DeclareLaunchArgument(name='model', default_value=default_model_path,
+                                            description='Absolute path to robot urdf file'),
+        robot_state_publisher_node,
+        joint_state_publisher_node
+    ])
+"""
+
 def get_display_launch_text(package_name, robot_name):
-    return display_launch % (package_name, robot_name)
+    return display_launch.format(package_name, robot_name, robot_name, package_name, robot_name, robot_name)
 
-
-def get_gazebo_launch_text(package_name, robot_name):
-    return gazebo_launch % (package_name, robot_name, robot_name)
+def state_publisher_launch_text(package_name, robot_name):
+    return state_publisher_launch.format(package_name, robot_name, robot_name)
