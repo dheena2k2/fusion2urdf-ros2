@@ -80,12 +80,12 @@ def run(context):
         Write.write_transmissions_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name, robot_name, save_dir)
         Write.write_gazebo_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name, robot_name, save_dir)
         Write.write_display_launch(package_name, robot_name, save_dir)
-        Write.write_gazebo_launch(package_name, robot_name, save_dir)
+        Write.write_state_publisher_launch(package_name, robot_name, save_dir)
+        Write.write_rviz_launch(package_name, robot_name, save_dir)
 
         # copy over package files
-        utils.create_package(package_name, save_dir, package_dir)
-        utils.update_setup_py(save_dir, package_name)
-        utils.update_setup_cfg(save_dir, package_name)
+        utils.create_package(save_dir, package_dir)
+        utils.update_cmakelists(save_dir, package_name)
         utils.update_package_xml(save_dir, package_name)
 
         # Generate STl files
