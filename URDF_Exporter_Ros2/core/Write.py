@@ -269,9 +269,9 @@ def write_display_launch(package_name, robot_name, save_dir):
     with open(file_name, mode='w') as f:
         f.write(file_text)
 
-def write_gazebo_launch(package_name, robot_name, save_dir):
+def write_state_publisher_launch(package_name, robot_name, save_dir):
     """
-    write gazebo launch file "save_dir/launch/gazebo.launch"
+    write state_publisher launch file "save_dir/launch/state_publisher.launch"
 
 
     Parameter
@@ -285,8 +285,30 @@ def write_gazebo_launch(package_name, robot_name, save_dir):
     try: os.mkdir(save_dir + '/launch')
     except: pass
 
-    file_text = launch_templates.get_gazebo_launch_text(package_name, robot_name)
+    file_text = launch_templates.get_state_publisher_launch_text(package_name, robot_name)
 
-    file_name = os.path.join(save_dir, 'launch', 'gazebo.launch.py')
+    file_name = os.path.join(save_dir, 'launch', 'state_publisher.launch.py')
+    with open(file_name, mode='w') as f:
+        f.write(file_text)
+
+def write_rviz_launch(package_name, robot_name, save_dir):
+    """
+    write rviz launch file "save_dir/launch/rviz.launch"
+
+
+    Parameter
+    ---------
+    robot_name: str
+        name of the robot
+    save_dir: str
+        path of the repository to save
+    """
+
+    try: os.mkdir(save_dir + '/launch')
+    except: pass
+
+    file_text = launch_templates.get_rviz_launch_text(package_name, robot_name)
+
+    file_name = os.path.join(save_dir, 'launch', 'rviz.launch.py')
     with open(file_name, mode='w') as f:
         f.write(file_text)

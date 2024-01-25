@@ -144,7 +144,7 @@ def prettify(elem):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")
 
-def create_package(package_name, save_dir, package_dir):
+def create_package(save_dir, package_dir):
     try: os.mkdir(save_dir + '/launch')
     except: pass
 
@@ -154,38 +154,16 @@ def create_package(package_name, save_dir, package_dir):
     try: os.mkdir(save_dir + '/config')
     except: pass
 
-    try: os.mkdir(save_dir + '/' +package_name)
+    try: os.mkdir(save_dir + '/worlds')
     except: pass
-    with open(os.path.join(save_dir, package_name, '__init__.py'), 'w'):
-        pass
-
-    try: os.mkdir(save_dir + '/resource')
-    except: pass
-    with open(os.path.join(save_dir, 'resource', package_name), 'w'):
-        pass
-
-    try: os.mkdir(save_dir + '/test')
-    except: pass
-
     copy_tree(package_dir, save_dir)
 
-def update_setup_py(save_dir, package_name):
-    file_name = save_dir + '/setup.py'
+def update_cmakelists(save_dir, package_name):
+    file_name = save_dir + '/CMakeLists.txt'
 
     for line in fileinput.input(file_name, inplace=True):
-        if "package_name = 'fusion2urdf_ros2'" in line:
-            sys.stdout.write("package_name = '" + package_name + "'\n")
-        else:
-            sys.stdout.write(line)
-
-def update_setup_cfg(save_dir, package_name):
-    file_name = save_dir + '/setup.cfg'
-
-    for line in fileinput.input(file_name, inplace=True):
-        if "script-dir" in line:
-            sys.stdout.write("script-dir=$base/lib/" + package_name + "\n")
-        elif "install-scripts" in line:
-            sys.stdout.write("install-scripts=$base/lib/" + package_name + "\n")
+        if 'project(fusion2urdf)' in line:
+            sys.stdout.write("project(" + package_name + ")\n")
         else:
             sys.stdout.write(line)
 
@@ -194,7 +172,7 @@ def update_package_xml(save_dir, package_name):
 
     for line in fileinput.input(file_name, inplace=True):
         if '<name>' in line:
-            sys.stdout.write("<name>" + package_name + "</name>\n")
+            sys.stdout.write("  <name>" + package_name + "</name>\n")
         elif '<description>' in line:
             sys.stdout.write("<description>The " + package_name + " package</description>\n")
         else:
