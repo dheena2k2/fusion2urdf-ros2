@@ -9,7 +9,7 @@ import adsk, adsk.core, adsk.fusion
 import os.path, re
 from xml.etree import ElementTree
 from xml.dom import minidom
-from distutils.dir_util import copy_tree
+from shutil import copytree
 import fileinput
 import sys
 
@@ -167,7 +167,7 @@ def create_package(package_name, save_dir, package_dir):
     try: os.mkdir(save_dir + '/test')
     except: pass
 
-    copy_tree(package_dir, save_dir)
+    copytree(package_dir, save_dir, dirs_exist_ok=True)
 
 def update_setup_py(save_dir, package_name):
     file_name = save_dir + '/setup.py'
@@ -182,10 +182,10 @@ def update_setup_cfg(save_dir, package_name):
     file_name = save_dir + '/setup.cfg'
 
     for line in fileinput.input(file_name, inplace=True):
-        if "script-dir" in line:
-            sys.stdout.write("script-dir=$base/lib/" + package_name + "\n")
-        elif "install-scripts" in line:
-            sys.stdout.write("install-scripts=$base/lib/" + package_name + "\n")
+        if "script_dir" in line:
+            sys.stdout.write("script_dir=$base/lib/" + package_name + "\n")
+        elif "install_scripts" in line:
+            sys.stdout.write("install_scripts=$base/lib/" + package_name + "\n")
         else:
             sys.stdout.write(line)
 
