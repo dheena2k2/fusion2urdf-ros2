@@ -124,9 +124,21 @@ def make_joints_dict(root, msg):
 
     joints_dict = {}
     
-    for joint in root.joints:
+    # Combine standard joints, as-built joints, and rigid groups
+    # For rigid groups, we treat them as fixed joints between the first two occurrences.
+    all_joints = list(root.joints) + list(root.asBuiltJoints) + list(root.rigidGroups)
+    
+    for joint in all_joints:
         joint_dict = {}
-        joint_type = joint_type_list[joint.jointMotion.jointType]
+        
+        is_rigid_group = hasattr(joint, 'occurrences')
+        is_as_built = hasattr(joint, 'geometry')
+        
+        if is_rigid_group:
+            joint_type = 'fixed'
+        else:
+            joint_type = joint_type_list[joint.jointMotion.jointType]
+
         joint_dict['type'] = joint_type
         
         # swhich by the type of the joint
@@ -169,11 +181,21 @@ def make_joints_dict(root, msg):
         elif joint_type == 'fixed':
             pass
         
-        if joint.occurrenceTwo.component.name == 'base_link':
-            joint_dict['parent'] = 'base_link'
+        if is_rigid_group:
+            # For rigid groups, we take the first two occurrences
+            occ1 = joint.occurrences.item(0)
+            occ2 = joint.occurrences.item(1)
+            if occ2.component.name == 'base_link':
+                joint_dict['parent'] = 'base_link'
+            else:
+                joint_dict['parent'] = re.sub('[ :()]', '_', occ2.name)
+            joint_dict['child'] = re.sub('[ :()]', '_', occ1.name)
         else:
-            joint_dict['parent'] = re.sub('[ :()]', '_', joint.occurrenceTwo.name)
-        joint_dict['child'] = re.sub('[ :()]', '_', joint.occurrenceOne.name)
+            if joint.occurrenceTwo.component.name == 'base_link':
+                joint_dict['parent'] = 'base_link'
+            else:
+                joint_dict['parent'] = re.sub('[ :()]', '_', joint.occurrenceTwo.name)
+            joint_dict['child'] = re.sub('[ :()]', '_', joint.occurrenceOne.name)
         
         
         #There seem to be a problem with geometryOrOriginTwo. To calcualte the correct orogin of the generated stl files following approach was used.
@@ -199,30 +221,43 @@ def make_joints_dict(root, msg):
             return( max([abs(a-b) for a,b in zip(v1, v2)]) < tol )
 
         try:
-            xyz_from_one_to_joint = joint.geometryOrOriginOne.origin.asArray() # Relative Joint pos
-            xyz_from_two_to_joint = joint.geometryOrOriginTwo.origin.asArray() # Relative Joint pos
-            xyz_of_one            = joint.occurrenceOne.transform.translation.asArray() # Link origin
-            xyz_of_two            = joint.occurrenceTwo.transform.translation.asArray() # Link origin
-            M_two = joint.occurrenceTwo.transform.asArray() # Matrix as a 16 element array.
-
-        # Compose joint position
-            case1 = allclose(xyz_from_two_to_joint, xyz_from_one_to_joint)
-            case2 = allclose(xyz_from_two_to_joint, xyz_of_one)
-            if case1 or case2:
-                xyz_of_joint = xyz_from_two_to_joint
+            if is_rigid_group:
+                # Rigid groups don't have a specific joint origin. We'll use the child's origin.
+                xyz_of_joint = joint.occurrences.item(0).transform.translation.asArray()
+                joint_dict['xyz'] = [round(i / 100.0, 6) for i in xyz_of_joint]
+            elif is_as_built:
+                # AsBuiltJoint uses geometry directly for origin
+                xyz_of_joint = joint.geometry.origin.asArray()
+                joint_dict['xyz'] = [round(i / 100.0, 6) for i in xyz_of_joint]
             else:
-                xyz_of_joint = trans(M_two, xyz_from_two_to_joint)
+                # Standard Joint logic
+                xyz_from_one_to_joint = joint.geometryOrOriginOne.origin.asArray() # Relative Joint pos
+                xyz_from_two_to_joint = joint.geometryOrOriginTwo.origin.asArray() # Relative Joint pos
+                xyz_of_one            = joint.occurrenceOne.transform.translation.asArray() # Link origin
+                xyz_of_two            = joint.occurrenceTwo.transform.translation.asArray() # Link origin
+                M_two = joint.occurrenceTwo.transform.asArray() # Matrix as a 16 element array.
 
-
-            joint_dict['xyz'] = [round(i / 100.0, 6) for i in xyz_of_joint]  # converted to meter
-
-        except:
-            try:
-                if type(joint.geometryOrOriginTwo)==adsk.fusion.JointOrigin:
-                    data = joint.geometryOrOriginTwo.geometry.origin.asArray()
+                # Compose joint position
+                case1 = allclose(xyz_from_two_to_joint, xyz_from_one_to_joint)
+                case2 = allclose(xyz_from_two_to_joint, xyz_of_one)
+                if case1 or case2:
+                    xyz_of_joint = xyz_from_two_to_joint
                 else:
-                    data = joint.geometryOrOriginTwo.origin.asArray()
-                joint_dict['xyz'] = [round(i / 100.0, 6) for i in data]  # converted to meter
+                    xyz_of_joint = trans(M_two, xyz_from_two_to_joint)
+
+                joint_dict['xyz'] = [round(i / 100.0, 6) for i in xyz_of_joint]  # converted to meter
+
+        except Exception as e:
+            try:
+                # Fallback for standard joint
+                if not is_as_built and not is_rigid_group:
+                    if type(joint.geometryOrOriginTwo)==adsk.fusion.JointOrigin:
+                        data = joint.geometryOrOriginTwo.geometry.origin.asArray()
+                    else:
+                        data = joint.geometryOrOriginTwo.origin.asArray()
+                    joint_dict['xyz'] = [round(i / 100.0, 6) for i in data]  # converted to meter
+                else:
+                    raise Exception("As-built joint or RigidGroup missing origin data")
             except:
                 msg = joint.name + " doesn't have joint origin. Please set it and run again."
                 break
