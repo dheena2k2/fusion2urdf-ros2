@@ -63,7 +63,16 @@ class Joint:
             limit.attrib = {'upper': str(self.upper_limit), 'lower': str(self.lower_limit),
                             'effort': '100', 'velocity': '100'}
             
-        self.joint_xml = "\n".join(utils.prettify(joint).split("\n")[1:])
+        joint_xml = "\n".join(utils.prettify(joint).split("\n")[1:])
+        
+        # Add a comment hint for continuous joints about limit tag
+        if self.type == 'continuous':
+            comment = '  <!-- To add limits, change type to "revolute" and uncomment: -->\n'
+            comment += '  <!-- <limit effort="0.7" velocity="7.85" upper="3.14" lower="-3.14"/> -->\n'
+            # Insert comment before the closing </joint> tag
+            joint_xml = joint_xml.replace('</joint>', comment + '</joint>')
+        
+        self.joint_xml = joint_xml
 
     def make_transmission_xml(self):
         """
@@ -188,14 +197,14 @@ def make_joints_dict(root, msg):
             if occ2.component.name == 'base_link':
                 joint_dict['parent'] = 'base_link'
             else:
-                joint_dict['parent'] = re.sub('[ :()]', '_', occ2.name)
-            joint_dict['child'] = re.sub('[ :()]', '_', occ1.name)
+                joint_dict['parent'] = re.sub('[ :()]', '_', occ2.component.name)
+            joint_dict['child'] = re.sub('[ :()]', '_', occ1.component.name)
         else:
             if joint.occurrenceTwo.component.name == 'base_link':
                 joint_dict['parent'] = 'base_link'
             else:
-                joint_dict['parent'] = re.sub('[ :()]', '_', joint.occurrenceTwo.name)
-            joint_dict['child'] = re.sub('[ :()]', '_', joint.occurrenceOne.name)
+                joint_dict['parent'] = re.sub('[ :()]', '_', joint.occurrenceTwo.component.name)
+            joint_dict['child'] = re.sub('[ :()]', '_', joint.occurrenceOne.component.name)
         
         
         #There seem to be a problem with geometryOrOriginTwo. To calcualte the correct orogin of the generated stl files following approach was used.

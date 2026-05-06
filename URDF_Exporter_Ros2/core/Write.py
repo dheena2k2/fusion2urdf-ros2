@@ -130,7 +130,7 @@ def write_urdf(joints_dict, links_xyz_dict, inertial_dict, package_name, robot_n
         f.write('\n')
         f.write('<xacro:include filename="$(find {})/urdf/materials.xacro" />'.format(package_name))
         f.write('\n')
-        f.write('<xacro:include filename="$(find {})/urdf/{}.trans" />'.format(package_name, robot_name))
+        f.write('<xacro:include filename="$(find {})/urdf/{}.ros2_control.xacro" />'.format(package_name, robot_name))
         f.write('\n')
         f.write('<xacro:include filename="$(find {})/urdf/{}.gazebo" />'.format(package_name, robot_name))
         f.write('\n')
@@ -156,53 +156,57 @@ def write_materials_xacro(joints_dict, links_xyz_dict, inertial_dict, package_na
 
 def write_transmissions_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name, robot_name, save_dir):
     """
-    Write joints and transmission information into urdf "repo/file_name"
+    Write ros2_control hardware interface definition for gz sim.
 
+    Generates a .ros2_control.xacro file that defines a GazeboSimSystem
+    with position and velocity command interfaces for each movable joint.
 
     Parameters
     ----------
     joints_dict: dict
         information of the each joint
-    repo: str
-        the name of the repository to save the xml file
     links_xyz_dict: dict
         xyz information of the each link
-    file_name: str
-        urdf full path
+    inertial_dict: dict
+        information of the each inertial
+    package_name: str
+        the name of the ROS 2 package
+    robot_name: str
+        the name of the robot
+    save_dir: str
+        directory path to save
     """
 
-    file_name = save_dir + '/urdf/{}.trans'.format(robot_name)  # the name of urdf file
+    file_name = save_dir + '/urdf/{}.ros2_control.xacro'.format(robot_name)
     with open(file_name, mode='w') as f:
         f.write('<?xml version="1.0" ?>\n')
-        f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro" >\n'.format(robot_name))
+        f.write('<robot name="{}" xmlns:xacro="http://www.ros.org/wiki/xacro">\n'.format(robot_name))
         f.write('\n')
+        f.write('  <ros2_control name="GazeboSimSystem" type="system">\n')
+        f.write('    <hardware>\n')
+        f.write('      <plugin>gz_ros2_control/GazeboSimSystem</plugin>\n')
+        f.write('    </hardware>\n')
 
         for j in joints_dict:
-            parent = joints_dict[j]['parent']
-            child = joints_dict[j]['child']
             joint_type = joints_dict[j]['type']
-            upper_limit = joints_dict[j]['upper_limit']
-            lower_limit = joints_dict[j]['lower_limit']
-            try:
-                xyz = [round(p-c, 6) for p, c in \
-                    zip(links_xyz_dict[parent], links_xyz_dict[child])]  # xyz = parent - child
-            except KeyError as ke:
-                app = adsk.core.Application.get()
-                ui = app.userInterface
-                ui.messageBox("There seems to be an error with the connection between\n\n%s\nand\n%s\n\nCheck \
-whether the connections\nparent=component2=%s\nchild=component1=%s\nare correct or if you need \
-to swap component1<=>component2"
-                % (parent, child, parent, child), "Error!")
-                quit()
+            if joint_type == 'fixed':
+                continue
+            f.write('    <joint name="{}">\n'.format(j))
+            f.write('      <command_interface name="position">\n')
+            f.write('        <param name="min">-6.28</param>\n')
+            f.write('        <param name="max">6.28</param>\n')
+            f.write('      </command_interface>\n')
+            f.write('      <command_interface name="velocity">\n')
+            f.write('        <param name="min">-3.14</param>\n')
+            f.write('        <param name="max">3.14</param>\n')
+            f.write('      </command_interface>\n')
+            f.write('      <state_interface name="position"/>\n')
+            f.write('      <state_interface name="velocity"/>\n')
+            f.write('      <state_interface name="effort"/>\n')
+            f.write('    </joint>\n')
 
-            joint = Joint.Joint(name=j, joint_type = joint_type, xyz=xyz, \
-            axis=joints_dict[j]['axis'], parent=parent, child=child, \
-            upper_limit=upper_limit, lower_limit=lower_limit)
-            if joint_type != 'fixed':
-                joint.make_transmission_xml()
-                f.write(joint.tran_xml)
-                f.write('\n')
-
+        f.write('  </ros2_control>\n')
+        f.write('\n')
         f.write('</robot>\n')
 
 def write_gazebo_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name, robot_name, save_dir):
@@ -221,7 +225,9 @@ def write_gazebo_xacro(joints_dict, links_xyz_dict, inertial_dict, package_name,
 
         gazebo = Element('gazebo')
         plugin = SubElement(gazebo, 'plugin')
-        plugin.attrib = {'name':'control', 'filename':'libgazebo_ros_control.so'}
+        plugin.attrib = {'filename':'gz_ros2_control-system', 'name':'gz_ros2_control::GazeboSimROS2ControlPlugin'}
+        parameters = SubElement(plugin, 'parameters')
+        parameters.text = f"$(find {package_name})/config/ros2_controllers.yaml"
         gazebo_xml = "\n".join(utils.prettify(gazebo).split("\n")[1:])
         f.write(gazebo_xml)
 
@@ -290,3 +296,54 @@ def write_gazebo_launch(package_name, robot_name, save_dir):
     file_name = os.path.join(save_dir, 'launch', 'gazebo.launch.py')
     with open(file_name, mode='w') as f:
         f.write(file_text)
+
+def write_ros2_controllers_yaml(joints_dict, package_name, robot_name, save_dir):
+    """
+    Write ros2_controllers.yaml config for gz sim ros2_control.
+
+    Defines:
+    - joint_state_broadcaster: publishes /joint_states
+    - joint_trajectory_controller: accepts trajectory commands for all movable joints
+
+    Parameters
+    ----------
+    joints_dict: dict
+        information of the each joint
+    package_name: str
+        the name of the ROS 2 package
+    robot_name: str
+        the name of the robot
+    save_dir: str
+        directory path to save
+    """
+    try: os.mkdir(save_dir + '/config')
+    except: pass
+
+    movable_joints = [j for j in joints_dict if joints_dict[j]['type'] != 'fixed']
+
+    file_name = save_dir + '/config/ros2_controllers.yaml'
+    with open(file_name, mode='w') as f:
+        f.write('controller_manager:\n')
+        f.write('  ros__parameters:\n')
+        f.write('    update_rate: 100  # Hz\n')
+        f.write('\n')
+        f.write('    joint_state_broadcaster:\n')
+        f.write('      type: joint_state_broadcaster/JointStateBroadcaster\n')
+        f.write('\n')
+        f.write('    joint_trajectory_controller:\n')
+        f.write('      type: joint_trajectory_controller/JointTrajectoryController\n')
+        f.write('\n')
+        f.write('joint_state_broadcaster:\n')
+        f.write('  ros__parameters:\n')
+        f.write('    publish_rate: 50.0  # Hz\n')
+        f.write('\n')
+        f.write('joint_trajectory_controller:\n')
+        f.write('  ros__parameters:\n')
+        f.write('    joints:\n')
+        for j in movable_joints:
+            f.write('      - {}\n'.format(j))
+        f.write('    command_interfaces:\n')
+        f.write('      - position\n')
+        f.write('    state_interfaces:\n')
+        f.write('      - position\n')
+        f.write('      - velocity\n')
